@@ -11,10 +11,9 @@ char ssid[] = "FT MARTU04";
 char pass[] = "01420289243";
 
 //Salidas
-int pin_rojo = 14;   // LED Rojo,   Pin D5
-int pin_verde = 2;  // LED Verde, Pin D4
-int pin_azul = 0;  // LED Azul,  Pin D3
-inr pin_inicio = 
+int pin_rojo = 14;   //LED Rojo,   Pin D5
+int pin_verde = 2;  //LED Verde, Pin D4
+int pin_azul = 0;  //LED Azul,  Pin D3
 
 //Arrays colores
 int negro[3]  = { 0, 0, 0 };
@@ -38,9 +37,14 @@ int repetir = 999999999;
 int j = 0;
 
 //Variables extras
-int pin_lector = 5; // Pin D1
+int pin_lector = 5; //Pin D1
+int pin_blanco_bajo = 12; //Pin D6
 int lector = LOW;
-int contador = 0;
+int blanco_bajo = LOW;
+int luz = LOW;
+int bandera_color_fade = 0;
+int bandera_blanco_bajo = 0;
+int bandera_luz = 0;
 
 //Inicializacion de variables de colores
 int prev_rojo = valor_rojo;
@@ -51,6 +55,7 @@ int prev_azul = valor_azul;
 void setup()
 {
   pinMode(pin_lector, INPUT);
+  pinMode(pin_blanco_bajo, INPUT);
   pinMode(pin_rojo, OUTPUT);
   pinMode(pin_verde, OUTPUT);
   pinMode(pin_azul, OUTPUT);
@@ -59,8 +64,7 @@ void setup()
   {
     Serial.begin(9600);
   }
-
-
+  
   Blynk.begin(auth, ssid, pass);
   //Se puede especificar un servidor
   //Blynk.begin(auth, ssid, pass, "blynk-cloud.com", 80);
@@ -70,41 +74,79 @@ void setup()
 void loop()
 {
   lector = digitalRead(pin_lector);
+  blanco_bajo = digitalRead(pin_blanco_bajo);
+  luz = digitalRead(15);
 
-  if(!lector)
+  if(!luz && !bandera_luz)
   {
-    if(contador)
-    {
-      digitalWrite(pin_rojo, LOW);
-      digitalWrite(pin_verde, LOW);
-      digitalWrite(pin_azul, LOW);
-
-      contador = 0;
-
-      Serial.println("Apagado");
-    }
+    Serial.println("Luz Apagada");
+    
+    bandera_luz = 1;
   }
   else
   {
-    crossFade(rojo);
-    crossFade(verde);
-    crossFade(azul);
-    crossFade(amarillo);
+    if(luz && bandera_luz)
+    {
+      Serial.println("Luz Prendida");
+    
+      bandera_luz = 0;
+    }
+  }
+  
+  if(!blanco_bajo && !bandera_blanco_bajo && bandera_color_fade)
+  {
+    digitalWrite(pin_rojo, LOW);
+    digitalWrite(pin_verde, LOW);
+    digitalWrite(pin_azul, LOW);
+    
+    bandera_blanco_bajo = 1;
 
-    if (repetir)
+    Serial.println("Blanco Bajo Apagado");
+  }
+  else if(blanco_bajo && bandera_blanco_bajo)
+  {
+    analogWrite(pin_rojo, 100);
+    analogWrite(pin_verde, 100);
+    analogWrite(pin_azul, 100);
+    
+    bandera_blanco_bajo = 0;
+
+    Serial.println("Blanco Bajo Prendido");
+  }
+  
+  if(!lector && !bandera_color_fade)
+  {
+    digitalWrite(pin_rojo, LOW);
+    digitalWrite(pin_verde, LOW);
+    digitalWrite(pin_azul, LOW);
+
+    bandera_color_fade = 1;
+
+    Serial.println("Color Fade Apagado");
+  }
+  else if(lector && bandera_color_fade)
+  {
+    if(repetir)
     {
       j += 1;
+      Serial.print("Repeticion Color Fade: ");
       Serial.println(j);
+      
       if (j >= repetir)
       {
-        contador = 1;
+        bandera_color_fade = 0;
         exit(j);
       }
     }
 
-    Serial.println("Prendido");
+    Serial.println("Color Fade Prendido");
 
-    contador = 1;
+    bandera_color_fade = 1;
+    
+    crossFade(rojo);
+    crossFade(verde);
+    crossFade(azul);
+    crossFade(amarillo);
   }
 
   delay(10);
