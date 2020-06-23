@@ -1,7 +1,7 @@
 // Outputs
-int redPin = 14;   // LED Rojo,   Pin D5
-int grnPin = 2;  // LED Verde, Pin D4
-int bluPin = 0;  // LED Azul,  Pin D3
+int redPin = 9;   // LED Rojo,   Pin D5
+int grnPin = 10;  // LED Verde, Pin D4
+int bluPin = 11;  // LED Azul,  Pin D3
 
 // Color arrays
 int black[3]  = { 0, 0, 0 };
@@ -11,6 +11,7 @@ int green[3]  = { 0, 100, 0 };
 int blue[3]   = { 0, 0, 100 };
 int yellow[3] = { 40, 95, 0 };
 int dimWhite[3] = { 30, 30, 30 };
+int violeta[3] = { 60, 0, 100 };
 // etc.
 
 // Inicializacion de colores
@@ -46,10 +47,7 @@ void setup()
 
 void loop()
 {
-  crossFade(red);
-  crossFade(green);
-  crossFade(blue);
-  crossFade(yellow);
+  crossFade(violeta);
 
   if (repeat) 
   {
