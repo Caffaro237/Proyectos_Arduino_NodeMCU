@@ -1,0 +1,193 @@
+// Outputs
+int redPin = 11;   // LED Rojo,   Pin D5
+int grnPin = 10;  // LED Verde, Pin D4
+int bluPin = 9;  // LED Azul,  Pin D3
+int boton = 2;
+int pote = A0;
+
+// Color arrays
+int black[3]  = { 0, 0, 0 };
+int white[3]  = { 100, 100, 100 };
+int red[3]    = { 100, 0, 0 };
+int green[3]  = { 0, 100, 0 };
+int blue[3]   = { 0, 0, 100 };
+int yellow[3] = { 40, 95, 0 };
+int dimWhite[3] = { 30, 30, 30 };
+int violeta[3] = { 60, 0, 100 };
+// etc.
+
+// Inicializacion de colores
+int redVal = black[0];
+int grnVal = black[1];
+int bluVal = black[2];
+
+int wait = 1;
+int hold = 0;
+int DEBUG = 1;
+int loopCount = 60;
+int repeat = 3;
+int j = 0;
+
+int estado_boton;
+int estado_fade = 0;
+int anti_estado_boton = 0;
+int valor_pote;
+
+// Inicializacion de variables de colores
+int prevR = redVal;
+int prevG = grnVal;
+int prevB = bluVal;
+
+// Configuracion de salida
+void setup()
+{
+  pinMode(redPin, OUTPUT);
+  pinMode(grnPin, OUTPUT);
+  pinMode(bluPin, OUTPUT);
+  pinMode(boton, INPUT);
+  pinMode(pote, INPUT);
+
+  if (DEBUG) 
+  {
+    Serial.begin(9600);
+  }
+}
+
+
+void loop()
+{
+  estado_fade = f_estado_fade(estado_fade);
+  
+  if(estado_fade)
+  {
+    //crossFade(white);
+    crossFade(blue);
+    crossFade(green);
+    crossFade(red);
+  }
+  else
+  {
+    digitalWrite(redPin, LOW);
+    digitalWrite(grnPin, LOW);
+    digitalWrite(bluPin, LOW);
+  }
+  
+  delay(30);
+}
+
+int f_estado_fade(int estado_fade)
+{
+  estado_boton = digitalRead(boton);
+
+  if(estado_boton != anti_estado_boton)
+  {
+    if(estado_boton)
+    {
+      delay(300);
+      
+      estado_fade = !estado_fade;
+      
+      Serial.println(estado_fade);
+    }
+    
+    anti_estado_boton = estado_boton;
+  }
+
+  return estado_fade;
+}
+
+int calculateStep(int prevValue, int endValue) 
+{
+  int step = endValue - prevValue;
+  if (step)
+  {
+    step = 1020/step;
+  } 
+  return step;
+}
+
+
+int calculateVal(int step, int val, int i) 
+{
+  if ((step) && i % step == 0) 
+  {
+    if (step > 0) 
+    {
+      val += 1;           
+    } 
+    else if (step < 0) 
+    {
+      val -= 1;
+    } 
+  }
+  
+  if (val > 255) {
+    val = 255;
+  } 
+  else if (val < 0) {
+    val = 0;
+  }
+  return val;
+}
+
+
+void crossFade(int color[3]) 
+{
+  // Conversor de 0 a 255
+  int R = (color[0] * 255) / 100;
+  int G = (color[1] * 255) / 100;
+  int B = (color[2] * 255) / 100;
+
+  int stepR = calculateStep(prevR, R);
+  int stepG = calculateStep(prevG, G); 
+  int stepB = calculateStep(prevB, B);
+
+  for (int i = 0; i <= 1020; i++) 
+  {
+    estado_fade = f_estado_fade(estado_fade);
+
+    valor_pote = analogRead(pote);
+
+    wait = map(valor_pote, 0, 1023, 0, 10);
+
+    
+    
+    if(!estado_fade)
+    {
+      break;
+    }
+    
+    redVal = calculateVal(stepR, redVal, i);
+    grnVal = calculateVal(stepG, grnVal, i);
+    bluVal = calculateVal(stepB, bluVal, i);
+
+    analogWrite(redPin, redVal);
+    analogWrite(grnPin, grnVal);
+    analogWrite(bluPin, bluVal);
+
+    delay(wait);
+
+    /*if (DEBUG) 
+    {
+      if (i == 0 or i % loopCount == 0)
+      {
+        Serial.print("Loop/RGB: #");
+        Serial.print(i);
+        Serial.print(" | ");
+        Serial.print(redVal);
+        Serial.print(" / ");
+        Serial.print(grnVal);
+        Serial.print(" / ");  
+        Serial.print(bluVal); 
+        Serial.print(" - Valor wait: "); 
+        Serial.println(wait); 
+      }
+      DEBUG += 1;
+    }*/
+  }
+  
+  prevR = redVal; 
+  prevG = grnVal; 
+  prevB = bluVal;
+  delay(hold);
+}

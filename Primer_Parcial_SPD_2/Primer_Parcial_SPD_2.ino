@@ -1,46 +1,84 @@
-#define CANT 3
+#define PULSADOR 7
 
-int leds[CANT] = {4, 5, 6};
-int pull_up = 7;
+#define LED_R 4
+#define LED_A 5
+#define LED_V 6
+#define CANT 4
 
-int estado_pull_up;
-int estado_anterior_pull_up = 0;
-
+int leds[CANT]={4, 5, 6};
 int i = 0;
 
-void setup() 
+int estado_pulsador;
+int estado_anterior_pulsador;
+
+void setup()
 {
   Serial.begin(9600);
   
-  for(i; i < CANT; i++)
-  {
-    pinMode(leds[i], OUTPUT);
-  }
-
-  pinMode(estado_pull_up, INPUT);
-
-  i = 0;
+  //Setea en salida a los leds
+  pinMode(LED_V, OUTPUT);
+  pinMode(LED_A, OUTPUT);
+  pinMode(LED_R, OUTPUT);
+  
+  //Setea en entrada al boton
+  pinMode(PULSADOR, INPUT);
+  
 }
 
-void loop() 
+void loop()
 {
-  estado_pull_up = digitalRead(pull_up);
-
-  if(estado_pull_up != estado_anterior_pull_up)
+  estado_pulsador = digitalRead(PULSADOR);
+  
+  if(estado_pulsador != estado_anterior_pulsador) //Antirebote
   {
-    if(!estado_pull_up)
+    if (estado_pulsador == LOW) //Entra si precionan el boton
     {
-      digitalWrite(leds[i], HIGH);
-      digitalWrite(leds[i - 1], LOW);
-      i = i + 1;
+      switch(i) //Dependiendo en que posicion del array este, entra la opcion
+      {
+        case 0:
+          digitalWrite(leds[i], HIGH);
+            digitalWrite(leds[i + 1], LOW);
+            digitalWrite(leds[i + 2], LOW);
+            i++;
+        
+          Serial.println("VERDE");
+        
+            break;
+        
+        case 1:
+          digitalWrite(leds[i], HIGH);
+            digitalWrite(leds[i - 1], LOW);
+            digitalWrite(leds[i + 1], LOW);
+            i++;
+        
+          Serial.println("AMARILLO");
+        
+            break;
+        
+        case 2:
+          digitalWrite(leds[i], HIGH);
+            digitalWrite(leds[i - 1], LOW);
+            digitalWrite(leds[i - 2], LOW);
+            i++;
+        
+          Serial.println("ROJO");
+        
+            break;
+        
+        case 3:
+          digitalWrite(leds[i], LOW);
+            digitalWrite(leds[i - 1], LOW);
+            digitalWrite(leds[i - 2], LOW);
+            i = 0;
+        
+          Serial.println("APAGADO");
+        
+            break;
+      }
     }
     
-    if(i == 4)
-    {
-      i = 0;
-    }
-    
-    estado_anterior_pull_up = estado_pull_up;
+    estado_anterior_pulsador = estado_pulsador; //Antirebote
   }
+  
   delay(10);
 }
