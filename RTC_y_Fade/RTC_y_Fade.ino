@@ -1,13 +1,3 @@
-//Proyecto realizado en Arduino Nano
-
-/*
- * Prueba de Reloj Tiempo Real (RTC) y Modulo I2C para LCD 2x16 By: http://dinastiatecnologica.com
- * Conexion i2C :Arduino UNO  SCL-> A5   SDA->A4  VCC->5V  GND->GND
- * Conexion RTC :Arduino UNO    GND->GND VCC->5V SCL-> SCL  SDA->SDA los dos pines despues del ...12,13,GND,AREF,SDA,SCL
- * NOTA: se debe cargar dos veces este programa 1. Con la linea 9 = RTC.adjust(DateTime(__DATE__, __TIME__));
- *                                              2. Con la linea 9 Comentada = //RTC.adjust(DateTime(__DATE__, __TIME__));
-*/
-
 #include <Wire.h> 
 #include "RTClib.h"
 
@@ -16,7 +6,6 @@
 RTC_DS1307 RTC;
 
 int r_diaSemana;
-int led = 9;
 
 int anio;
 int mes;
@@ -34,18 +23,62 @@ int j = 0;
 // Hora en la que suena el timbre escrito  h1=Hora, m1=Minutos
 // Cuando no se programa ninguna hora se debe dejar escrito el numero 99
 
-int hh_mm_ss[CANT][3] = {{13, 33, 0}, 
-                         {13, 33, 30}, 
-                         {13, 34, 0}, 
+int hh_mm_ss[CANT][3] = {{17, 31, 0}, 
+                         {17, 31, 30}, 
+                         {17, 32, 0}, 
                          {99, 0, 0}, 
                          {99, 0, 0},
                          {99, 0, 0}};
 
-////////////////////////////////// Void Setup() ///////////
-void setup () 
+// Outputs
+int redPin = 11;   // LED Rojo,   Pin D5
+int grnPin = 10;  // LED Verde, Pin D4
+int bluPin = 9;  // LED Azul,  Pin D3
+int boton = 2;
+int pote = A0;
+
+// Color arrays
+int black[3]  = { 0, 0, 0 };
+int white[3]  = { 100, 100, 100 };
+int red[3]    = { 100, 0, 0 };
+int green[3]  = { 0, 100, 0 };
+int blue[3]   = { 0, 0, 100 };
+int yellow[3] = { 40, 95, 0 };
+int dimWhite[3] = { 30, 30, 30 };
+int violeta[3] = { 60, 0, 100 };
+// etc.
+
+// Inicializacion de colores
+int redVal = black[0];
+int grnVal = black[1];
+int bluVal = black[2];
+
+int wait = 1;
+int hold = 0;
+int DEBUG = 1;
+int loopCount = 60;
+int repeat = 3;
+int l = 0;
+
+int estado_boton;
+int estado_fade = 0;
+int anti_estado_boton = 0;
+int valor_pote;
+int bandera_fade = 0;
+
+// Inicializacion de variables de colores
+int prevR = redVal;
+int prevG = grnVal;
+int prevB = bluVal;
+
+void setup()
 {
-  pinMode(led, OUTPUT);                    // Configura como salida el pin 7
-   
+  pinMode(redPin, OUTPUT);
+  pinMode(grnPin, OUTPUT);
+  pinMode(bluPin, OUTPUT);
+  pinMode(boton, INPUT);
+  pinMode(pote, INPUT);
+
   Wire.begin();                               
   RTC.begin();                                // Inicia la comunicaci¢n con el RTC
    
@@ -56,30 +89,170 @@ void setup ()
    
 }
 
-////////////////////////////////// Void loop() ///////////
 void loop()
 {
+  estado_fade = f_estado_fade(estado_fade);
+  
+  if(estado_fade)
+  {
+    //crossFade(white);
+    crossFade(blue);
+    crossFade(green);
+    crossFade(red);
+  }
+  else
+  {
+    if(bandera_fade)
+    {
+      digitalWrite(redPin, LOW);
+      digitalWrite(grnPin, LOW);
+      digitalWrite(bluPin, LOW);
+
+      bandera_fade = 0;
+    }
+  }
+  
   r_diaSemana = dia_de_semana();   //Llama a la funcion que calcula el dia de la semana y lo almacena en r_diaSemana
   
-  horario();           // llama a la funcion que activa el horario 1
-   
-  //digitalWrite(led, LOW);     // apaga el timbre
-  delay(1000);                    // La informacion se actualiza cada 1/2 seg.
+  horario();
+  
+  delay(50);                    // La informacion se actualiza cada 1/2 seg.
 }
 
-//Funcion que activa el Timbre
+int f_estado_fade(int estado_fade)
+{
+  estado_boton = digitalRead(boton);
+
+  if(estado_boton != anti_estado_boton)
+  {
+    if(estado_boton)
+    {
+      delay(300);
+      
+      estado_fade = !estado_fade;
+      
+      Serial.println(estado_fade);
+    }
+    
+    anti_estado_boton = estado_boton;
+  }
+
+  return estado_fade;
+}
+
+int calculateStep(int prevValue, int endValue) 
+{
+  int step = endValue - prevValue;
+  if (step)
+  {
+    step = 1020/step;
+  } 
+  return step;
+}
+
+
+int calculateVal(int step, int val, int i) 
+{
+  if ((step) && i % step == 0) 
+  {
+    if (step > 0) 
+    {
+      val += 1;           
+    } 
+    else if (step < 0) 
+    {
+      val -= 1;
+    } 
+  }
+  
+  if (val > 255) {
+    val = 255;
+  } 
+  else if (val < 0) {
+    val = 0;
+  }
+  return val;
+}
+
+
+void crossFade(int color[3]) 
+{
+  // Conversor de 0 a 255
+  int R = (color[0] * 255) / 100;
+  int G = (color[1] * 255) / 100;
+  int B = (color[2] * 255) / 100;
+
+  int stepR = calculateStep(prevR, R);
+  int stepG = calculateStep(prevG, G); 
+  int stepB = calculateStep(prevB, B);
+
+  for (int i = 0; i <= 1020; i++) 
+  {
+    estado_fade = f_estado_fade(estado_fade);
+
+    valor_pote = analogRead(pote);
+
+    wait = map(valor_pote, 0, 1023, 0, 10);
+
+    bandera_fade = 1;
+    
+    if(!estado_fade)
+    {
+      break;
+    }
+
+    horario();
+    
+    redVal = calculateVal(stepR, redVal, i);
+    grnVal = calculateVal(stepG, grnVal, i);
+    bluVal = calculateVal(stepB, bluVal, i);
+
+    analogWrite(redPin, redVal);
+    analogWrite(grnPin, grnVal);
+    analogWrite(bluPin, bluVal);
+
+    delay(wait);
+
+    /*if (DEBUG) 
+    {
+      if (i == 0 or i % loopCount == 0)
+      {
+        Serial.print("Loop/RGB: #");
+        Serial.print(i);
+        Serial.print(" | ");
+        Serial.print(redVal);
+        Serial.print(" / ");
+        Serial.print(grnVal);
+        Serial.print(" / ");  
+        Serial.print(bluVal); 
+        Serial.print(" - Valor wait: "); 
+        Serial.println(wait); 
+      }
+      DEBUG += 1;
+    }*/
+  }
+  
+  prevR = redVal; 
+  prevG = grnVal; 
+  prevB = bluVal;
+  delay(hold);
+}
+
+
 void activar_led(int intensidad)
 {
-  for(j; j < intensidad; j++)
+  for(l; l < intensidad; l++)
   {
-    if(j > 255)
+    if(l > 255)
     {
       bandera = 1;
-      j = 255;
+      l = 255;
       break;
     }
     
-    analogWrite(led, j);
+    analogWrite(redPin , l);
+    analogWrite(grnPin , l);
+    analogWrite(bluPin , l);
     delay(100);
   }
 
@@ -89,7 +262,7 @@ void activar_led(int intensidad)
   }
   
   Serial.print("LED Activo a una intensidad de: ");
-  Serial.println(j);
+  Serial.println(l);
 }
 
 //Calcula el dia de la Semana
@@ -230,20 +403,24 @@ void horario()
   
   if(bandera)
   {
-    titilar(led, 5);
+    titilar(redPin, grnPin, bluPin, 5);
     bandera = 0;
-    j = 0;
+    l = 0;
     intensidad_led = 0;
   }
 }
 
-void titilar(int pin, int veces)
+void titilar(int rojo, int verde, int azul, int veces)
 {
   for(int i = 0; i < veces; i++)
   {
-    digitalWrite(pin, HIGH);
+    digitalWrite(rojo, HIGH);
+    digitalWrite(verde, HIGH);
+    digitalWrite(azul, HIGH);
     delay(tiempo);
-    digitalWrite(pin, LOW);
+    digitalWrite(rojo, LOW);
+    digitalWrite(verde, LOW);
+    digitalWrite(azul, LOW);
     delay(tiempo);
   }
 }
